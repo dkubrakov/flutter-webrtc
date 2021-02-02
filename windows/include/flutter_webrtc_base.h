@@ -66,6 +66,24 @@ inline EncodableMap findMap(const EncodableMap &map, const std::string &key) {
   return EncodableMap();
 }
 
+inline EncodableList findList(const EncodableMap &map, const std::string &key) {
+  auto it = map.find(EncodableValue(key));
+  if (it != map.end() && TypeIs<EncodableList>(it->second)) 
+    return GetValue<EncodableList>(it->second);
+  return EncodableList();
+}
+
+inline std::vector<std::string> toStringVector(const EncodableList &list) {
+   std::vector<std::string> vector_;
+   std::vector<EncodableValue>::const_iterator it;
+   it = list.begin();
+   while (it != list.end()) {
+       vector_.push_back(GetValue<std::string>(*it));
+       ++it;
+   }
+   return vector_;
+}
+
 inline std::string findString(const EncodableMap &map, const std::string &key) {
   auto it = map.find(EncodableValue(key));
   if (it != map.end() && TypeIs<std::string>(it->second))
@@ -114,6 +132,10 @@ class FlutterWebRTCBase {
 
   bool ParseConstraints(const EncodableMap &constraints,
                         RTCConfiguration *configuration);
+
+  scoped_refptr<RTCMediaTrack> MediaTrackForId(const std::string &id);
+
+  void RemoveMediaTrackForId(const std::string &id);
 
   scoped_refptr<RTCMediaConstraints> ParseMediaConstraints(
       const EncodableMap &constraints);

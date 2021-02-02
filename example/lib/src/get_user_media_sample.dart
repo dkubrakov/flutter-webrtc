@@ -61,7 +61,8 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
     };
 
     try {
-      var stream = await navigator.getUserMedia(mediaConstraints);
+      // var stream = await navigator.getUserMedia(mediaConstraints);
+      var stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
       _mediaDevicesList = await navigator.mediaDevices.enumerateDevices();
       _localStream = stream;
       _localRenderer.srcObject = _localStream;
@@ -166,6 +167,7 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
                 IconButton(
                   icon: Icon(Icons.switch_video),
                   onPressed: _toggleCamera,
+                  tooltip: 'Toggle Camera',
                 ),
                 IconButton(
                   icon: Icon(Icons.camera),
@@ -176,7 +178,6 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
                   onPressed: _isRec ? _stopRecording : _startRecording,
                 ),
                 PopupMenuButton<String>(
-                  onSelected: _selectAudioOutput,
                   itemBuilder: (BuildContext context) {
                     return _mediaDevicesList
                         .where((device) => device.kind == 'audiooutput')
@@ -189,6 +190,7 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
                       }
                     }).toList();
                   },
+                  onSelected: _selectAudioOutput,
                 ),
               ]
             : null,

@@ -175,7 +175,18 @@ class _MyAppState extends State<LoopBackSample> {
       _localStream =
           await navigator.mediaDevices.getUserMedia(mediaConstraints);
       _localRenderer.srcObject = _localStream;
-      await _peerConnection.addStream(_localStream);
+      // 1) Plan-B
+      //await _peerConnection.addStream(_localStream);
+      // 2) Unified-Plan
+      print('stream id=${_localStream.id}');
+      _localStream.getTracks().forEach((track) async {
+        print('track id=${track.id} kind=${track.kind}');
+        if ('audio' == track.kind) {
+          var sender = await _peerConnection.addTrack(track, _localStream);
+          print(sender);
+        }
+      });
+
       /* old API
       await _peerConnection.addStream(_localStream);
       // Unified-Plan
@@ -240,7 +251,7 @@ class _MyAppState extends State<LoopBackSample> {
       */
       var description = await _peerConnection.createOffer(offerSdpConstraints);
       var sdp = description.sdp;
-      print('sdp = $sdp');
+      // print('sdp = \n$sdp');
       await _peerConnection.setLocalDescription(description);
       //change for loopback.
       description.type = 'answer';

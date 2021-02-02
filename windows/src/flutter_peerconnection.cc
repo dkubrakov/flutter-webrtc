@@ -116,6 +116,209 @@ void FlutterPeerConnection::GetStats(
     const std::string &track_id, RTCPeerConnection *pc,
     std::unique_ptr<MethodResult<EncodableValue>> result) {}
 
+EncodableMap dtmfSenderToMap(DtmfSender dtmfSender, std::string id) {
+  EncodableMap map;
+  map[EncodableValue("dtmfSenderId")] = id;
+  //TODO if (dtmfSender != null) {}
+  map[EncodableValue("interToneGap")] = dtmfSender.interToneGap;
+  map[EncodableValue("duration")] = dtmfSender.duration;
+  return map;
+}
+
+EncodableMap mediaTrackToMap(scoped_refptr<RTCMediaTrack> track) {
+  EncodableMap map;
+  map[EncodableValue("id")] = track->id();
+  map[EncodableValue("label")] = track->id();
+  map[EncodableValue("kind")] = track->kind();
+  map[EncodableValue("enabled")] = track->enabled();
+  map[EncodableValue("remote")] = true;
+  map[EncodableValue("readyState")] = "live"; // TODO  track->state()
+  return map;
+}
+
+EncodableList rtpCodecParametersToMap(std::unordered_map<std::string, std::string> parameters) {
+  EncodableList list;
+  for (auto parameter : parameters) {
+    list.push_back(EncodableValue{EncodableMap{
+      {EncodableValue(parameter.first), EncodableValue(parameter.second)},
+    }});
+  }
+  return list;
+}
+
+EncodableMap rtpParametersToMapFake(RtpParameters &parameters) {
+  EncodableMap map;
+  map[EncodableValue("transactionId")] = EncodableValue();
+
+  // map[EncodableValue("rtcp")] =  EncodableMap {
+  //   {EncodableValue("cname"), EncodableValue()},
+  //   {EncodableValue("reducedSize"), EncodableValue()}
+  // };
+  map[EncodableValue("rtcp")] =  EncodableMap {
+    {EncodableValue("cname"), EncodableValue(parameters.rtcp.cname)},
+    {EncodableValue("reducedSize"), EncodableValue(parameters.rtcp.reduced_size)}
+  };
+
+  map[EncodableValue("headerExtensions")] = EncodableValue(EncodableList());
+
+  map[EncodableValue("encodings")] = EncodableValue(EncodableList());
+
+  map[EncodableValue("codecs")] = EncodableValue(EncodableList());
+
+  return map;
+}
+
+EncodableMap rtpParametersToMap(RtpParameters &parameters) {
+  EncodableMap map;
+  map[EncodableValue("transactionId")] = EncodableValue(parameters.transaction_id);
+  map[EncodableValue("mid")] = EncodableValue(parameters.mid);
+
+  map[EncodableValue("rtcp")] =  EncodableMap {
+    {EncodableValue("cname"), EncodableValue(parameters.rtcp.cname)},
+    {EncodableValue("reducedSize"), EncodableValue(parameters.rtcp.reduced_size)}
+  };
+
+  // map[EncodableValue("headerExtensions")] = EncodableList{EncodableValue{EncodableMap{}}, EncodableValue{EncodableMap{}}}
+  EncodableList extensions;
+  // for (const RtpHeaderExtensionParameters& extension : parameters.header_extensions) {
+  //   extensions.push_back(EncodableValue{EncodableMap{
+  //     {EncodableValue("uri"), EncodableValue(extension.uri)},
+  //     {EncodableValue("id"), EncodableValue(extension.id)},
+  //     {EncodableValue("encrypted"), EncodableValue(extension.encrypted)},
+  //   }});
+  // }
+  map[EncodableValue("headerExtensions")] = extensions;
+  
+  
+
+  EncodableList encodings;
+  int size = static_cast<int>(parameters.encodings.size());
+  map[EncodableValue("encodingsSize")] = EncodableValue(size);
+  // RtpEncodingParametersVector list = parameters.encodings; // ERROR "can't dereference value-initialized vector iterator"
+  // auto iter = list.begin();  // ERROR "can't dereference value-initialized vector iterator"
+  // for (auto encoding : parameters.encodings) { / ERROR "can't dereference value-initialized vector iterator"
+  auto iter = parameters.encodings.cbegin();
+  if (iter) {
+    while (iter != parameters.encodings.cend()) {
+      encodings.push_back(EncodableValue{EncodableMap{
+        {EncodableValue("active"), EncodableValue((*iter)->active)},
+        {EncodableValue("minBitrate"), EncodableValue((*iter)->min_bitrate_bps)},
+        {EncodableValue("maxBitrate"), EncodableValue((*iter)->max_bitrate_bps)},
+        {EncodableValue("maxFramerate"), EncodableValue((*iter)->max_framerate)},
+        {EncodableValue("numTemporalLayers"), EncodableValue((*iter)->num_temporal_layers)},
+        {EncodableValue("scaleResolutionDownBy"), EncodableValue((*iter)->scale_resolution_down_by)},
+        {EncodableValue("ssrc"), EncodableValue((*iter)->ssrc)},
+      }});
+      ++iter;
+    }
+  }
+  
+  map[EncodableValue("encodings")] = encodings;
+
+  EncodableList codecs;
+  // for (RtpCodecParameters codec : parameters.codecs) {
+  //   codecs.push_back(EncodableValue{EncodableMap{
+  //     {EncodableValue("name"), EncodableValue(codec.name)},
+  //     {EncodableValue("payloadType"), EncodableValue(codec.payload_type)},
+  //     {EncodableValue("clockRate"), EncodableValue(codec.clock_rate)},
+  //     {EncodableValue("numChannels"), EncodableValue(codec.num_channels)}, // TODO default 1
+  //     // TODO {EncodableValue("parameters"), EncodableValue(rtpCodecParametersToMap(codec.parameters))},
+  //     {EncodableValue("kind"), EncodableValue((codec.kind == MEDIA_TYPE_AUDIO) ? "audio" : "video")}, // TODO переделать Enum в строку 
+  //   }});
+  // }
+  map[EncodableValue("codecs")] = codecs;
+
+// EncodableValue(EncodableMap{
+//     {EncodableValue("flag"), EncodableValue(true)},
+//     {EncodableValue("name"), EncodableValue("Thing")},
+//     {EncodableValue("values"), EncodableValue(EncodableList{
+//                                     EncodableValue(1),
+//                                     EncodableValue(2.0),
+//                                     EncodableValue(4),
+//                                 })},
+// });
+
+  return map;
+}
+
+void FlutterPeerConnection::AddTrack(RTCPeerConnection *pc, const std::string &track_id, const EncodableList &stream_ids,
+                                     std::unique_ptr<MethodResult<EncodableValue>> result) {
+
+    std::vector<std::string> streamIds = toStringVector(stream_ids);
+
+    // AUDIO
+    // create a new track
+    scoped_refptr<RTCAudioSource> source =  FlutterPeerConnection:: base_->factory_->CreateAudioSource("audio_input");
+    // ... new UUID
+    // std::string uuid = base_->GenerateUUID();
+    // scoped_refptr<RTCAudioTrack> track =  base_->factory_->CreateAudioTrack(source,uuid.c_str());
+    // base_->media_tracks_.insert({uuid, track});
+    // ... passed UUID
+    scoped_refptr<RTCAudioTrack> track =  base_->factory_->CreateAudioTrack(source, track_id.c_str());
+    base_->media_tracks_.insert({track_id, track});
+
+    scoped_refptr<RTCRtpSender> sender = pc->AddTrack(track, streamIds[0].c_str());
+    // result->Error("AddTrack", pc->message());
+
+    if (sender) {
+      const char *message = sender->message();
+      RtpParameters rtpPatameters = sender->parameters();
+      RtpEncodingParametersVector list = sender->encodings();
+      int size = static_cast<int>(list.size());
+      
+      EncodableMap rtpSender;
+      rtpSender[EncodableValue("message")] = EncodableValue(message);
+      rtpSender[EncodableValue("encodings_size")] = EncodableValue(size);
+      
+      EncodableList encodings;
+      for (auto element : list) {
+           encodings.push_back(EncodableValue{EncodableMap{
+              {EncodableValue("rid"), EncodableValue(element->rid)},
+              {EncodableValue("active"), EncodableValue(element->active)},
+              {EncodableValue("minBitrate"), EncodableValue(element->min_bitrate_bps)},
+              {EncodableValue("maxBitrate"), EncodableValue(element->max_bitrate_bps)},
+              {EncodableValue("maxFramerate"), EncodableValue(element->max_framerate)},
+              {EncodableValue("numTemporalLayers"), EncodableValue(element->num_temporal_layers)},
+              {EncodableValue("scaleResolutionDownBy"), EncodableValue(element->scale_resolution_down_by)},
+              {EncodableValue("ssrc"), EncodableValue(element->ssrc)},
+            }});
+      }
+      rtpSender[EncodableValue("encodings_")] = encodings;
+      
+
+      RtpParameters* rtpPatameters1 = sender->parameters1();
+      int size1 = static_cast<int>(rtpPatameters1->encodings.size());
+      rtpSender[EncodableValue("encodings1_size")] = EncodableValue(size1);
+      // RtpEncodingParametersVector list1 = rtpPatameters1->encodings; // «can't dereference value-initialized vector iterator»
+      EncodableList encodings1;
+      auto iter = rtpPatameters1->encodings.cbegin();
+      if (iter) {
+        while (iter != rtpPatameters1->encodings.cend()) {
+          encodings1.push_back(EncodableValue{EncodableMap{
+              {EncodableValue("rid"), EncodableValue((*iter)->rid)},
+              {EncodableValue("active"), EncodableValue((*iter)->active)},
+              {EncodableValue("minBitrate"), EncodableValue((*iter)->min_bitrate_bps)},
+              {EncodableValue("maxBitrate"), EncodableValue((*iter)->max_bitrate_bps)},
+              // ...
+            }});
+          ++iter;
+        }
+      }
+      rtpSender[EncodableValue("encodings1_")] = encodings1;
+
+
+      rtpSender[EncodableValue("senderId")] = sender->id();
+      rtpSender[EncodableValue("ownsTrack")] = true;
+      rtpSender[EncodableValue("dtmfSender")] = dtmfSenderToMap(sender->dtmfSender(), sender->id());
+      rtpSender[EncodableValue("rtpParameters")] = rtpParametersToMap(rtpPatameters);
+      rtpSender[EncodableValue("track")] = mediaTrackToMap(sender->track());
+      result->Success(EncodableValue(rtpSender));
+    } else {
+      result->Error("AddTrack",
+                    "AddTrack() sender is null");
+    }
+}
+
 FlutterPeerConnectionObserver::FlutterPeerConnectionObserver(
     FlutterWebRTCBase *base, scoped_refptr<RTCPeerConnection> peerconnection,
     BinaryMessenger *messenger, const std::string &channel_name)
@@ -133,7 +336,7 @@ FlutterPeerConnectionObserver::FlutterPeerConnectionObserver(
 	},
 		[&](const flutter::EncodableValue* arguments)
 		-> std::unique_ptr<StreamHandlerError<flutter::EncodableValue>> {
-		event_sink_ = nullptr;
+		// event_sink_ = nullptr;
 		return nullptr;
 	});
 

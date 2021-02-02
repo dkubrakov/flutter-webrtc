@@ -16,10 +16,10 @@
 #include "base/refcount.h"
 #include "base/scoped_ref_ptr.h"
 
-#ifdef WIN32
-#undef strncpy
-#define strncpy strncpy_s
-#endif
+//#ifdef WIN32
+//#undef strncpy
+//#define strncpy strncpy_s
+//#endif
 
 namespace libwebrtc {
 

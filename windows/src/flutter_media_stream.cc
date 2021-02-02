@@ -88,6 +88,8 @@ void FlutterMediaStream::GetUserAudio(const EncodableMap& constraints,
 
     std::string track_id = track->id();
 
+    // base_->media_tracks_.insert({track_id, track});
+
     EncodableMap track_info;
     track_info[EncodableValue("id")] = track->id();
     track_info[EncodableValue("label")] = track->id();
@@ -182,6 +184,10 @@ void FlutterMediaStream::GetUserVideo(const EncodableMap& constraints,
   std::string uuid = base_->GenerateUUID();
   scoped_refptr<RTCVideoTrack> track =
       base_->factory_->CreateVideoTrack(source, uuid.c_str());
+
+  std::string track_id = track->id();
+
+  // base_->media_tracks_.insert({track_id, track});
 
   EncodableList videoTracks;
   EncodableMap info;

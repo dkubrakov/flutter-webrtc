@@ -81,6 +81,9 @@ class FlutterPeerConnection {
   void GetStats(const std::string &track_id, RTCPeerConnection *pc,
                 std::unique_ptr<MethodResult<EncodableValue>> result);
 
+  void AddTrack(RTCPeerConnection *pc, const std::string &track_id, const EncodableList &stream_ids,
+                std::unique_ptr<MethodResult<EncodableValue>> result);
+
  private:
   FlutterWebRTCBase *base_;
 };

@@ -57,6 +57,17 @@ void FlutterWebRTCBase::RemoveStreamForId(const std::string &id) {
   if (it != local_streams_.end()) local_streams_.erase(it);
 }
 
+scoped_refptr<RTCMediaTrack> FlutterWebRTCBase::MediaTrackForId(const std::string &id) {
+    auto it = media_tracks_.find(id);
+    if (it != media_tracks_.end()) return (*it).second;
+    return nullptr;
+}
+
+void FlutterWebRTCBase::RemoveMediaTrackForId(const std::string &id) {
+    auto it = media_tracks_.find(id);
+    if (it != media_tracks_.end()) media_tracks_.erase(it);
+}
+
 bool FlutterWebRTCBase::ParseConstraints(const EncodableMap &constraints,
                                          RTCConfiguration *configuration) {
   memset(&configuration->ice_servers, 0, sizeof(configuration->ice_servers));
